@@ -1,0 +1,301 @@
+#!/bin/bash
+echo ""
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+link=$( pbpaste )
+imagescompleted=0
+
+sportsillustrated="swimsuit.si.com/swimsuit/model/"
+itr2010="itr2010.org"
+intheraw="in-the-raw.org"
+
+doitr2010category=0 
+itr2010category="itr2010.org/category/"
+if [[ "$link" == *"$itr2010category"* ]]; then
+	doitr2010category=1
+fi
+
+doitrcategory=0 
+intherawcategory="in-the-raw.org/archives/category/"
+if [[ "$link" == *"$intherawcategory"* ]]; then
+	doitrcategory=1
+fi
+
+function si {
+	echo "image-dl:~ $ using SI scraper"
+	echo "image-dl:~ $ performing cleanup"
+	rm -f temp.html
+	rm -f 1.html
+	rm -f 2.html
+	rm -f 3.html
+	rm -f 4.html
+	rm -f need.txt
+	DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+	link=$( pbpaste )
+	wget -q $link -O temp.html
+	echo "image-dl:~ $ recieved html"
+	xidel -s --extract //h1 temp.html > 1.html
+	grep "\S" 1.html > 2.html
+	text=$( cat 2.html )
+	cat 2.html | sed s/:/\ -/g > 3.html
+	cat 3.html | sed -e 's/\//,/g' > 4.html
+	text=$( cat 4.html )
+	echo "image-dl:~ $ title: $text"
+	xidel -s --extract "//phx-gallery-image/@data-full-src" temp.html >> need.txt
+	sed -i -n 's+/c_limit%2Ccs_srgb%2Cfl_progressive%2Ch_2000%2Cq_auto:good%2Cw_2000/+/+g' need.txt
+	amount=$( cat need.txt | wc -l | sed  s/\ //g )
+	echo "image-dl:~ $ downloading $amount images"
+	wget -q -P "$DIR/ingest/Sports Illustrated - Swimsuit/$text" -i need.txt
+	rm -f temp.html
+	rm -f 1.html
+	rm -f 2.html
+	rm -f 3.html
+	rm -f 4.html
+	rm -f need.txt
+	echo "image-dl:~ $ complete"
+	echo ""
+	imagescompleted=$(( imagescompleted+amount ))
+	pagescompleted=1
+}
+
+function itr2010 {
+	echo "image-dl:~ $ using ITR2010 scraper"
+	echo "image-dl:~ $ performing cleanup"
+	rm -f temp.html
+	rm -f 1.html
+	rm -f 2.html
+	rm -f 3.html
+	rm -f 4.html
+	rm -f need.txt
+	rm -f temp.txt
+	rm -f a.txt
+	DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+	link=$( pbpaste )
+	wget -q $link -O temp.html
+	xidel -s --extract //a/@href temp.html | grep category | sed '1!d' >> a.txt
+	catlink=$( cat a.txt )
+	rm -f a.txt
+	xidel -s --extract //h1 $catlink | sed 's/\Category//g' | sed s/://g | sed 's/^ *//g' >> a.txt
+	catfolder=$( cat a.txt )
+	echo "image-dl:~ $ recieved html"
+	xidel -s --extract //h1 temp.html > 1.html
+	grep "\S" 1.html > 2.html
+	text=$( cat 2.html )
+	cat 2.html | sed s/:/\ -/g > 3.html
+	cat 3.html | sed -e 's/\//,/g' > 4.html
+	text=$( cat 4.html )
+	echo "image-dl:~ $ title: $text"
+	xidel -s --extract "//a/@href" temp.html >> temp.txt
+	grep uploads temp.txt >> need.txt
+	amount=$( cat need.txt | wc -l | sed  s/\ //g )
+	echo "image-dl:~ $ downloading $amount images"
+	wget -q -P "$DIR/ingest/ITR2010/$catfolder/$text" -i need.txt
+	echo "image-dl:~ $ complete"
+	echo ""
+	imagescompleted=$(( imagescompleted+amount ))
+}
+
+function intheraw {
+	echo "image-dl:~ $ using In-The-Raw scraper"
+	echo "image-dl:~ $ performing cleanup"
+	rm -f temp.html
+	rm -f 1.html
+	rm -f 2.html
+	rm -f 3.html
+	rm -f 4.html
+	rm -f need.txt
+	rm -f temp.txt
+	rm -f a.txt
+	rm -f pages.txt
+	DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+	link=$( pbpaste )
+	curl -s --compressed $link >> temp.html
+	xidel -s --extract //a/@href temp.html | grep category | sed '1!d' >> a.txt
+	catlink=$( cat a.txt )
+	rm -f a.txt
+	xidel -s --extract //h1 $catlink | sed 's/\Category//g' | sed s/://g | sed 's/^ *//g' >> a.txt
+	catfolder=$( cat a.txt )
+	echo "image-dl:~ $ recieved html"
+	xidel -s --extract //h1 temp.html > 1.html
+	grep "\S" 1.html > 2.html
+	text=$( cat 2.html )
+	cat 2.html | sed s/:/\ -/g > 3.html
+	cat 3.html | sed -e 's/\//,/g' > 4.html
+	text=$( cat 4.html )
+	echo "image-dl:~ $ title: $text"
+	xidel -s --extract "//a/@href" temp.html >> temp.txt
+	grep uploads temp.txt >> need.txt
+	amount=$( cat need.txt | wc -l | sed  s/\ //g )
+	echo "image-dl:~ $ downloading $amount images"
+	wget -q -P "$DIR/ingest/In-The-Raw/$catfolder/$text" -i need.txt
+	echo "image-dl:~ $ complete"
+	echo ""
+	imagescompleted=$(( imagescompleted+amount ))
+}
+
+if [[ $doitr2010category == 0 ]]; then
+	if [[ "$link" == *"$itr2010"* ]]; then	
+		itr2010
+		pagescompleted=1
+	fi
+fi
+
+if [[ "$link" == *"$sportsillustrated"* ]]; then
+	si
+	pagescompleted=1
+fi
+
+if [[ $doitrcategory == 0 ]]; then
+	if [[ "$link" == *"$intheraw"* ]]; then	
+		intheraw
+		pagescompleted=1
+	fi
+fi
+
+if [[ "$link" == *"$itr2010category"* ]]; then
+	echo "image-dl:~ $ using ITR2010 scraper"
+	echo "image-dl:~ $ performing cleanup"
+	rm -f temp.html
+	rm -f temp2.html
+	rm -f 1.html
+	rm -f 2.html
+	rm -f 3.html
+	rm -f 4.html
+	rm -f need.txt
+	rm -f posts.txt
+	rm -f temp.txt
+	rm -f pages.txt
+	DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+	link=$( pbpaste )
+	curl -s --compressed $link >> temp.html
+	catname=$( xidel -s --extract //h1 temp.html | sed 's/\Category//g' | sed s/://g | sed 's/^ *//g' )
+	linktemp=$( echo $link )
+	echo "image-dl:~ $ recieved html"
+	pages=$( grep href temp.html | grep page-numbers > temp2.html | xidel -s --extract //a temp2.html 2> /dev/null | sed '/posts/d' | tail -n 1 )
+	echo ""
+	multi=0
+	if [[ $pages > 1 ]]; then
+		multi=1
+		echo "image-dl:~ $ multiple page itr2010 category"
+		num=1
+		rm -f pages.txt
+		xidel -s -e //a/@href temp.html | grep \.org\/20 | sed '/respond/d' | sed '/twitter/d' | sed '/pinterest/d' | sed '/tumblr/d' | sed '/facebook/d' | sed '/reddit/d' | sed '/more/d' | sed '/share/d' | sed '/#comments/d' | awk '!seen[$0]++' >> pages.txt
+		n=1
+		while read -r line; do
+			# Reading each line
+			echo $line | pbcopy
+			itr2010
+		done < pages.txt
+		num=$(( num+1 ))
+		rm -f pages.txt
+		pagescompleted=1
+		until [ $num -gt $pages ]
+		do
+			wget -q -O temp.html $linktemp/page/$num
+			rm -f pages.txt
+			xidel -s -e //a/@href temp.html | grep \.org\/20 | sed '/respond/d' | sed '/twitter/d' | sed '/pinterest/d' | sed '/tumblr/d' | sed '/facebook/d' | sed '/reddit/d' | sed '/more/d' | sed '/share/d' | sed '/#comments/d' | awk '!seen[$0]++' >> pages.txt
+			while read -r line; do
+				# Reading each line
+				echo $line | pbcopy
+				itr2010
+			done < pages.txt
+			num=$(( num+1 ))
+			pagescompleted=$(( pagescompleted+1 ))
+		done
+	else
+		echo "image-dl:~ $ single page itr2010 category"
+		echo ""
+		rm -f pages.txt
+		xidel -s -e //a/@href temp.html | grep \.org\/20 | sed '/respond/d' | sed '/twitter/d' | sed '/pinterest/d' | sed '/tumblr/d' | sed '/facebook/d' | sed '/reddit/d' | sed '/more/d' | sed '/share/d' | sed '/#comments/d' | awk '!seen[$0]++' >> pages.txt
+		n=1
+		while read -r line; do
+			# Reading each line
+			echo $line | pbcopy
+			itr2010
+		done < pages.txt
+		pagescompleted=1
+	fi
+fi
+
+if [[ "$link" == *"$itrcategory"* ]]; then
+	echo "image-dl:~ $ using In-The-Raw scraper"
+	echo "image-dl:~ $ performing cleanup"
+	rm -f temp.html
+	rm -f temp2.html
+	rm -f 1.html
+	rm -f 2.html
+	rm -f 3.html
+	rm -f 4.html
+	rm -f need.txt
+	rm -f posts.txt
+	rm -f temp.txt
+	rm -f pages.txt
+	DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+	link=$( pbpaste )
+	wget -q $link -O temp.html
+	catname=$( xidel -s --extract //h1 temp.html | sed 's/\Category//g' | sed s/://g | sed 's/^ *//g' )
+	linktemp=$( echo $link )
+	echo "image-dl:~ $ recieved html"
+	pages=$( grep href temp.html | grep page-numbers > temp2.html | xidel -s --extract //a temp2.html 2> /dev/null | sed '/posts/d' | tail -n 1 )
+	echo ""
+	if [[ $pages > 1 ]]; then
+		multi=1
+		echo "image-dl:~ $ multiple page In-The-Raw category"
+		echo ""
+		num=1
+		rm -f pages.txt
+		xidel -s -e //a/@href temp.html  | grep in-the-raw | grep archives | sed '/tag/d' | sed '/author/d' | sed '/#/d' | sed '/?/d' | sed '/category/d' | uniq >> pages.txt
+		n=1
+		while read -r line; do
+			# Reading each line
+			echo $line | pbcopy
+			intheraw
+		done < pages.txt
+		num=$(( num+1 ))
+		rm -f pages.txt
+		pagescompleted=1
+		until [ $num -gt $pages ]
+		do
+			wget -q -O temp.html $linktemp/page/$num
+			rm -f pages.txt
+			xidel -s -e //a/@href temp.html  | grep in-the-raw | grep archives | sed '/tag/d' | sed '/author/d' | sed '/#/d' | sed '/?/d' | sed '/category/d' | uniq >> pages.txt
+			while read -r line; do
+				# Reading each line
+				echo $line | pbcopy
+				intheraw
+			done < pages.txt
+			num=$(( num+1 ))
+			pagescompleted=$(( pagescompleted+1 ))
+		done
+	else
+		echo "image-dl:~ $ single page In-The-Raw category"
+		echo ""
+		rm -f pages.txt
+		xidel -s -e //a/@href temp.html  | grep in-the-raw | grep archives | sed '/tag/d' | sed '/author/d' | sed '/#/d' | sed '/?/d' | sed '/category/d' | uniq >> pages.txt
+		n=1
+		while read -r line; do
+			# Reading each line
+			echo $line | pbcopy
+			intheraw
+		done < pages.txt
+		pagescompleted=1
+	fi
+fi
+
+echo "image-dl:~ $ completed all tasks"
+echo "image-dl:~ $ purged temporary files"
+echo "image-dl:~ $ stats: downloaded $imagescompleted images on $pagescompleted page/s"
+echo ""
+
+rm -f temp.html
+rm -f temp2.html
+rm -f 1.html
+rm -f 2.html
+rm -f 3.html
+rm -f 4.html
+rm -f need.txt
+rm -f posts.txt
+rm -f temp.txt
+rm -f a.txt
+rm -f pages.txt
+
+exit 0
